@@ -9,6 +9,7 @@ import '../../core/widgets/section_header.dart';
 import '../../data/database.dart';
 import 'finance_repository.dart';
 import 'finance_dialogs.dart';
+import '../assistant/assistant_button.dart';
 import 'ai_analysis_screen.dart';
 import 'import/import_screen.dart';
 import 'patrimoine_screen.dart';
@@ -49,6 +50,7 @@ class FinanceScreen extends ConsumerWidget {
                 MaterialPageRoute(builder: (_) => const ImportScreen()),
               ),
             ),
+            const AssistantButton(),
           ],
           bottom: const TabBar(
             tabs: [

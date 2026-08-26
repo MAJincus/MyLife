@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/format.dart';
 import '../../core/widgets/section_header.dart';
 import '../../data/database.dart';
+import '../assistant/assistant_button.dart';
 import 'diet_dialogs.dart';
 import 'diet_icons.dart';
 import 'diet_menus.dart';
@@ -38,6 +39,7 @@ class DietScreen extends StatelessWidget {
                     context, ProviderScope.containerOf(context)),
               ),
             ),
+            const AssistantButton(),
           ],
         ),
         body: const TabBarView(

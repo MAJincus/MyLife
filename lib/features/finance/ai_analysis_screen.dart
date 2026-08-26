@@ -45,7 +45,7 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
       final res = await client.complete(
         [LlmMessage.user(context)],
         system: _system,
-        maxTokens: 1500,
+        maxTokens: 4000,
       );
       setState(() => _result = res.text);
     } on LlmException catch (e) {

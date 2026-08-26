@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
 import '../../data/database.dart';
+import '../assistant/assistant_button.dart';
 import 'agenda_dialogs.dart';
 import 'agenda_repository.dart';
 import 'calendar_service.dart';
@@ -31,6 +32,7 @@ class AgendaScreen extends ConsumerWidget {
                   .then((_) => ref.invalidate(externalEventsProvider));
             },
           ),
+          const AssistantButton(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

@@ -43,6 +43,28 @@ class HealthRepository {
         ));
   }
 
+  Future<void> updateSleep(
+    int id, {
+    required DateTime bedTime,
+    required DateTime wakeTime,
+    required int quality,
+    String note = '',
+  }) {
+    var wake = wakeTime;
+    if (!wake.isAfter(bedTime)) wake = wake.add(const Duration(days: 1));
+    final minutes = wake.difference(bedTime).inMinutes;
+    return (db.update(db.sleepEntries)..where((s) => s.id.equals(id))).write(
+      SleepEntriesCompanion(
+        date: Value(DateTime(wake.year, wake.month, wake.day)),
+        bedTime: Value(bedTime),
+        wakeTime: Value(wake),
+        durationMinutes: Value(minutes),
+        quality: Value(quality),
+        note: Value(note),
+      ),
+    );
+  }
+
   Future<void> deleteSleep(int id) =>
       (db.delete(db.sleepEntries)..where((s) => s.id.equals(id))).go();
 
@@ -69,6 +91,21 @@ class HealthRepository {
           intensity: Value(intensity),
           note: Value(note),
         ));
+  }
+
+  Future<void> updatePain(
+    int id, {
+    required String location,
+    required int intensity,
+    String note = '',
+  }) {
+    return (db.update(db.painEntries)..where((p) => p.id.equals(id))).write(
+      PainEntriesCompanion(
+        location: Value(location),
+        intensity: Value(intensity),
+        note: Value(note),
+      ),
+    );
   }
 
   Future<void> deletePain(int id) =>

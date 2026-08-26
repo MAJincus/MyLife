@@ -20,6 +20,7 @@ enum _AmountMode { single, debitCredit }
 
 class _ImportScreenState extends ConsumerState<ImportScreen> {
   CsvTable? _table;
+  String _rawContent = '';
   String _fileName = '';
   bool _hasHeader = true;
   _AmountMode _mode = _AmountMode.single;
@@ -35,12 +36,21 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final path = res?.files.single.path;
     if (path == null) return;
     final bytes = await File(path).readAsBytes();
-    final content = BankCsv.decodeBytes(bytes);
-    final table = BankCsv.parse(content);
+    _rawContent = BankCsv.decodeBytes(bytes);
+    _fileName = res!.files.single.name;
+    _applyParse(BankCsv.parse(_rawContent));
+  }
+
+  /// (Re)construit la table avec le séparateur choisi et re-devine les colonnes.
+  void _reparse(String delimiter) {
+    if (_rawContent.isEmpty) return;
+    _applyParse(BankCsv.parse(_rawContent, delimiter: delimiter));
+  }
+
+  void _applyParse(CsvTable table) {
     final headers = table.rows.isNotEmpty ? table.rows.first : <String>[];
     final guess = BankCsv.guessColumns(headers);
     setState(() {
-      _fileName = res!.files.single.name;
       _table = table;
       _dateCol = guess.date;
       _labelCol = guess.label;
@@ -51,6 +61,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       } else {
         _mode = _AmountMode.single;
         _amountCol = guess.amount;
+        _debitCol = -1;
+        _creditCol = -1;
       }
     });
   }
@@ -58,14 +70,27 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   String _cell(List<String> row, int i) =>
       (i >= 0 && i < row.length) ? row[i] : '';
 
-  String _colLabel(int i) {
+  /// Nom court de la colonne (en-tête si présent, sinon numéro).
+  String _colName(int i) {
     final t = _table!;
     if (_hasHeader && t.rows.isNotEmpty && i < t.rows.first.length) {
       final h = t.rows.first[i].trim();
-      if (h.isNotEmpty) return h;
+      if (h.isNotEmpty) return _short(h, 24);
     }
     return 'Colonne ${i + 1}';
   }
+
+  /// Exemple de valeur (1re ligne de données) pour aider au repérage.
+  String _colSample(int i) {
+    final t = _table!;
+    final data = _hasHeader ? t.rows.skip(1) : t.rows;
+    final first = data.isNotEmpty ? data.first : const <String>[];
+    final v = (i < first.length) ? first[i].trim() : '';
+    return v.isEmpty ? '—' : _short(v, 20);
+  }
+
+  String _short(String s, int max) =>
+      s.length <= max ? s : '${s.substring(0, max)}…';
 
   List<ParsedTx> _build() {
     final t = _table;
@@ -199,8 +224,51 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             TextButton(onPressed: _pickFile, child: const Text('Changer')),
           ],
         ),
-        Text('${t.rows.length} lignes · séparateur « ${t.delimiter == '\t' ? 'tab' : t.delimiter} »',
+        Text('${t.rows.length} lignes · ${t.columnCount} colonnes',
             style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 12),
+
+        // Aperçu des premières lignes brutes (pour vérifier la structure).
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            _rawContent
+                .split('\n')
+                .where((l) => l.trim().isNotEmpty)
+                .take(3)
+                .join('\n'),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Sélecteur de séparateur.
+        Row(
+          children: [
+            const Text('Séparateur :'),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: ';', label: Text(';')),
+                  ButtonSegment(value: ',', label: Text(',')),
+                  ButtonSegment(value: '\t', label: Text('Tab')),
+                  ButtonSegment(value: '|', label: Text('|')),
+                ],
+                selected: {t.delimiter},
+                onSelectionChanged: (s) => _reparse(s.first),
+                showSelectedIcon: false,
+              ),
+            ),
+          ],
+        ),
         const Divider(height: 24),
 
         SwitchListTile(
@@ -284,17 +352,44 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   Widget _colDropdown(
       String label, int value, int cols, ValueChanged<int> onChanged) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: DropdownButtonFormField<int>(
         initialValue: value >= 0 && value < cols ? value : null,
         isExpanded: true,
+        itemHeight: null,
+        menuMaxHeight: 360,
+        dropdownColor: scheme.surfaceContainerHigh,
         decoration: InputDecoration(labelText: label),
+        // Affichage compact dans le champ (nom de colonne seul).
+        selectedItemBuilder: (context) => [
+          for (var i = 0; i < cols; i++)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Col ${i + 1} · ${_colName(i)}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+        ],
         items: [
           for (var i = 0; i < cols; i++)
             DropdownMenuItem(
-                value: i,
-                child: Text(_colLabel(i), overflow: TextOverflow.ellipsis)),
+              value: i,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Col ${i + 1} · ${_colName(i)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text('ex : ${_colSample(i)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: scheme.outline)),
+                ],
+              ),
+            ),
         ],
         onChanged: (v) {
           if (v != null) onChanged(v);

@@ -106,7 +106,7 @@ class _CorrelationScreenState extends ConsumerState<CorrelationScreen> {
             'pourraient signifier et 2-3 pistes d\'action concrètes. Rappelle '
             'que corrélation n\'est pas causalité et que ce ne sont pas des '
             'conseils médicaux.',
-        maxTokens: 1000,
+        maxTokens: 2500,
       );
       setState(() => _interpretation = res.text);
     } on LlmException catch (e) {

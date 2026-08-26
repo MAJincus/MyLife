@@ -113,6 +113,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           _history,
           system: system,
           tools: assistantTools,
+          maxTokens: 2048,
         );
         _history.add(LlmMessage.assistant(res.text, res.toolCalls));
 

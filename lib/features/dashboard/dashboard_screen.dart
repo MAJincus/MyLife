@@ -8,6 +8,7 @@ import '../../core/widgets/section_header.dart';
 import '../../data/database.dart';
 import '../agenda/agenda_dialogs.dart';
 import '../agenda/agenda_repository.dart';
+import '../assistant/assistant_button.dart';
 import '../diet/diet_dialogs.dart';
 import '../diet/diet_repository.dart';
 import '../finance/finance_dialogs.dart';
@@ -29,6 +30,7 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('MyLife'),
         actions: [
+          const AssistantButton(),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => context.push('/settings'),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
 import '../../data/database.dart';
+import '../assistant/assistant_button.dart';
 import 'health_dialogs.dart';
 import 'health_pdf.dart';
 import 'health_repository.dart';
@@ -26,6 +27,7 @@ class HealthScreen extends StatelessWidget {
                 onPressed: () => showExportHealthPdf(context, ref),
               ),
             ),
+            const AssistantButton(),
           ],
           bottom: const TabBar(
             tabs: [
@@ -117,6 +119,8 @@ class _SleepTab extends ConsumerWidget {
                     subtitle: Text(
                         '${Fmt.time(e.bedTime)} → ${Fmt.time(e.wakeTime)}  ·  '
                         '${'★' * e.quality}${'☆' * (5 - e.quality)}'),
+                    trailing: const Icon(Icons.edit, size: 18),
+                    onTap: () => showAddSleepSheet(context, ref, entry: e),
                   ),
                 ),
               const SizedBox(height: 80),
@@ -234,6 +238,8 @@ class _PainTab extends ConsumerWidget {
                         ? '${Fmt.dayMonth(e.at)} · ${Fmt.time(e.at)}'
                         : '${e.note}\n${Fmt.dayMonth(e.at)} · ${Fmt.time(e.at)}'),
                     isThreeLine: e.note.isNotEmpty,
+                    trailing: const Icon(Icons.edit, size: 18),
+                    onTap: () => showAddPainSheet(context, ref, entry: e),
                   ),
                 ),
               const SizedBox(height: 80),

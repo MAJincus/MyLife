@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../assistant/claude_client.dart';
+import '../assistant/llm/llm.dart';
+import '../assistant/llm/llm_factory.dart';
 import '../diet/diet_repository.dart';
 import '../finance/finance_repository.dart';
 import '../health/health_repository.dart';
@@ -95,19 +96,20 @@ class _CorrelationScreenState extends ConsumerState<CorrelationScreen> {
     setState(() => _interpreting = true);
     final lines = correlations.take(8).map(describeCorrelation).join('\n');
     try {
-      final reply = await ClaudeClient.send(
-        systemPrompt:
+      final client = await LlmFactory.current();
+      final res = await client.complete(
+        [LlmMessage.user('Corrélations observées :\n$lines')],
+        system:
             'Tu es un coach santé/finances pédagogue. On te donne des '
             'corrélations statistiques observées dans les données de '
             'l\'utilisateur. Explique en français, avec prudence, ce qu\'elles '
             'pourraient signifier et 2-3 pistes d\'action concrètes. Rappelle '
             'que corrélation n\'est pas causalité et que ce ne sont pas des '
             'conseils médicaux.',
-        messages: [ClaudeMessage('user', 'Corrélations observées :\n$lines')],
         maxTokens: 1000,
       );
-      setState(() => _interpretation = reply);
-    } on ClaudeException catch (e) {
+      setState(() => _interpretation = res.text);
+    } on LlmException catch (e) {
       setState(() => _interpretation = '⚠️ ${e.message}');
     } finally {
       setState(() => _interpreting = false);

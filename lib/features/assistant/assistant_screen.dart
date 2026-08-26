@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import 'assistant_context.dart';
 import 'assistant_tools.dart';
-import 'claude_client.dart';
+import 'llm/llm.dart';
+import 'llm/llm_factory.dart';
 import 'voice_service.dart';
 
 class AssistantScreen extends ConsumerStatefulWidget {
@@ -24,7 +25,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   final _messages = <_ChatItem>[]; // affichage
-  final _api = <Map<String, dynamic>>[]; // conversation brute pour l'API
+  final _history = <LlmMessage>[]; // conversation unifiée pour le LLM
   final _voice = VoiceService();
   bool _sending = false;
   bool _listening = false;
@@ -94,60 +95,43 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     final container = ProviderScope.containerOf(context, listen: false);
     setState(() {
       _messages.add(_ChatItem('user', text));
-      _api.add({'role': 'user', 'content': text});
+      _history.add(LlmMessage.user(text));
       _controller.clear();
       _sending = true;
     });
     _scrollToEnd();
 
     try {
+      final client = await LlmFactory.current();
       final personal = await buildPersonalContext(ref);
       final system = '$_system\n\n$personal';
 
-      // Boucle d'agent : on rejoue tant que Claude demande des outils.
+      // Boucle d'agent : on rejoue tant que le modèle demande des outils.
       var guard = 0;
       while (guard++ < 6) {
-        final resp = await ClaudeClient.createMessage(
-          messages: _api,
-          systemPrompt: system,
+        final res = await client.complete(
+          _history,
+          system: system,
           tools: assistantTools,
         );
-        final content =
-            (resp['content'] as List).cast<Map<String, dynamic>>();
-        _api.add({'role': 'assistant', 'content': content});
+        _history.add(LlmMessage.assistant(res.text, res.toolCalls));
 
-        final textOut = content
-            .where((b) => b['type'] == 'text')
-            .map((b) => b['text'])
-            .join('\n')
-            .trim();
-        if (textOut.isNotEmpty) {
-          setState(() => _messages.add(_ChatItem('assistant', textOut)));
-          if (_voiceReply) _voice.speak(textOut);
+        if (res.text.isNotEmpty) {
+          setState(() => _messages.add(_ChatItem('assistant', res.text)));
+          if (_voiceReply) _voice.speak(res.text);
           _scrollToEnd();
         }
 
-        final toolUses =
-            content.where((b) => b['type'] == 'tool_use').toList();
-        if (resp['stop_reason'] != 'tool_use' || toolUses.isEmpty) break;
+        if (!res.wantsTools) break;
 
-        final results = <Map<String, dynamic>>[];
-        for (final tu in toolUses) {
-          final input = (tu['input'] as Map).cast<String, dynamic>();
-          final result =
-              await executeTool(container, tu['name'].toString(), input);
-          setState(() =>
-              _messages.add(_ChatItem('tool', '✅ $result')));
-          results.add({
-            'type': 'tool_result',
-            'tool_use_id': tu['id'],
-            'content': result,
-          });
+        for (final tc in res.toolCalls) {
+          final result = await executeTool(container, tc.name, tc.args);
+          setState(() => _messages.add(_ChatItem('tool', '✅ $result')));
+          _history.add(LlmMessage.tool(tc.id, result));
         }
-        _api.add({'role': 'user', 'content': results});
         _scrollToEnd();
       }
-    } on ClaudeException catch (e) {
+    } on LlmException catch (e) {
       setState(() => _messages.add(_ChatItem('assistant', '⚠️ ${e.message}')));
     } finally {
       setState(() => _sending = false);

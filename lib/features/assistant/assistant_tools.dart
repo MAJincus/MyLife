@@ -6,14 +6,14 @@ import '../agenda/agenda_repository.dart';
 import '../diet/diet_repository.dart';
 import '../finance/finance_repository.dart';
 import '../health/health_repository.dart';
+import 'llm/llm.dart';
 
-/// Outils exposés à Claude pour agir dans l'app (tool use).
-const assistantTools = <Map<String, dynamic>>[
-  {
-    'name': 'add_transaction',
-    'description':
-        'Enregistre une dépense ou un revenu dans le suivi financier.',
-    'input_schema': {
+/// Outils exposés au modèle pour agir dans l'app (tool use), format unifié.
+const assistantTools = <LlmTool>[
+  LlmTool(
+    name: 'add_transaction',
+    description: 'Enregistre une dépense ou un revenu dans le suivi financier.',
+    parameters: {
       'type': 'object',
       'properties': {
         'amount': {'type': 'number', 'description': 'Montant en euros, positif.'},
@@ -30,11 +30,11 @@ const assistantTools = <Map<String, dynamic>>[
       },
       'required': ['amount', 'kind'],
     },
-  },
-  {
-    'name': 'add_reminder',
-    'description': 'Crée un rappel dans l\'agenda avec notification.',
-    'input_schema': {
+  ),
+  LlmTool(
+    name: 'add_reminder',
+    description: 'Crée un rappel dans l\'agenda avec notification.',
+    parameters: {
       'type': 'object',
       'properties': {
         'title': {'type': 'string'},
@@ -50,11 +50,11 @@ const assistantTools = <Map<String, dynamic>>[
       },
       'required': ['title', 'datetime'],
     },
-  },
-  {
-    'name': 'log_meal',
-    'description': 'Ajoute un aliment/repas au journal alimentaire du jour.',
-    'input_schema': {
+  ),
+  LlmTool(
+    name: 'log_meal',
+    description: 'Ajoute un aliment/repas au journal alimentaire du jour.',
+    parameters: {
       'type': 'object',
       'properties': {
         'label': {'type': 'string'},
@@ -69,50 +69,47 @@ const assistantTools = <Map<String, dynamic>>[
       },
       'required': ['label', 'kcal'],
     },
-  },
-  {
-    'name': 'add_weight',
-    'description': 'Enregistre une mesure de poids (kg).',
-    'input_schema': {
+  ),
+  LlmTool(
+    name: 'add_weight',
+    description: 'Enregistre une mesure de poids (kg).',
+    parameters: {
       'type': 'object',
       'properties': {
         'weight_kg': {'type': 'number'},
       },
       'required': ['weight_kg'],
     },
-  },
-  {
-    'name': 'log_medication',
-    'description': 'Enregistre la prise d\'un médicament existant, par son nom.',
-    'input_schema': {
+  ),
+  LlmTool(
+    name: 'log_medication',
+    description: 'Enregistre la prise d\'un médicament existant, par son nom.',
+    parameters: {
       'type': 'object',
       'properties': {
         'name': {'type': 'string'},
       },
       'required': ['name'],
     },
-  },
-  {
-    'name': 'log_sleep',
-    'description': 'Enregistre une nuit de sommeil (heures de coucher/réveil).',
-    'input_schema': {
+  ),
+  LlmTool(
+    name: 'log_sleep',
+    description: 'Enregistre une nuit de sommeil (heures de coucher/réveil).',
+    parameters: {
       'type': 'object',
       'properties': {
         'bedtime': {'type': 'string', 'description': 'Heure de coucher HH:mm.'},
         'waketime': {'type': 'string', 'description': 'Heure de réveil HH:mm.'},
-        'quality': {
-          'type': 'integer',
-          'description': 'Qualité ressentie 1 à 5.'
-        },
+        'quality': {'type': 'integer', 'description': 'Qualité 1 à 5.'},
         'note': {'type': 'string'},
       },
       'required': ['bedtime', 'waketime'],
     },
-  },
-  {
-    'name': 'log_pain',
-    'description': 'Enregistre une douleur (localisation + intensité 0-10).',
-    'input_schema': {
+  ),
+  LlmTool(
+    name: 'log_pain',
+    description: 'Enregistre une douleur (localisation + intensité 0-10).',
+    parameters: {
       'type': 'object',
       'properties': {
         'location': {'type': 'string'},
@@ -121,7 +118,7 @@ const assistantTools = <Map<String, dynamic>>[
       },
       'required': ['intensity'],
     },
-  },
+  ),
 ];
 
 /// Exécute un outil demandé par Claude et renvoie un message de résultat.

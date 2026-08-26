@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
-import '../assistant/claude_client.dart';
+import '../assistant/llm/llm.dart';
+import '../assistant/llm/llm_factory.dart';
 import 'finance_repository.dart';
 import 'life_profile_sheet.dart';
 
@@ -40,13 +41,14 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
     });
     try {
       final context = await _buildContext();
-      final reply = await ClaudeClient.send(
-        systemPrompt: _system,
-        messages: [ClaudeMessage('user', context)],
+      final client = await LlmFactory.current();
+      final res = await client.complete(
+        [LlmMessage.user(context)],
+        system: _system,
         maxTokens: 1500,
       );
-      setState(() => _result = reply);
-    } on ClaudeException catch (e) {
+      setState(() => _result = res.text);
+    } on LlmException catch (e) {
       setState(() => _error = e.message);
     } finally {
       setState(() => _loading = false);

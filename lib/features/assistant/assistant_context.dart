@@ -114,6 +114,16 @@ Future<void> _dietSection(
         buf.writeln('- Poids cible : '
             '${profile.targetWeightKg!.toStringAsFixed(1)} kg');
       }
+      // Objectifs macros (selon poids + calories).
+      final kcalT = profile.dailyKcalTarget;
+      if (kcalT != null) {
+        final m = macroTargets(kcalT, latest);
+        buf.writeln('- Objectifs macros/j : P ${m.protein.round()}g, '
+            'G ${m.carbs.round()}g, L ${m.fat.round()}g');
+      }
+      // Hydratation du jour.
+      final water = await repo.watchWaterForDay(now).first;
+      buf.writeln('- Hydratation : $water / ${hydrationTargetMl(latest)} ml');
     }
   } catch (_) {}
 }

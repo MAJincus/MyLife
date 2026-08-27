@@ -136,6 +136,13 @@ class WeightEntries extends Table {
   TextColumn get note => text().withDefault(const Constant(''))();
 }
 
+/// Prises d'eau (hydratation).
+class WaterEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  DateTimeColumn get at => dateTime()();
+  IntColumn get ml => integer()();
+}
+
 class ActivityEntries extends Table {
   IntColumn get id => integer().autoIncrement()();
   DateTimeColumn get at => dateTime()();

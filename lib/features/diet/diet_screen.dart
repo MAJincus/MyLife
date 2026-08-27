@@ -88,6 +88,7 @@ class _JournalTab extends ConsumerWidget {
                           0, (s, a) => s + a.kcalBurned);
                       return _JournalBody(
                         target: target,
+                        weightKg: latestWeight,
                         nutrition: nut,
                         burned: burned,
                         activities: activities,
@@ -128,12 +129,14 @@ class _JournalTab extends ConsumerWidget {
 class _JournalBody extends ConsumerWidget {
   const _JournalBody({
     required this.target,
+    required this.weightKg,
     required this.nutrition,
     required this.burned,
     required this.activities,
     required this.hasProfile,
   });
   final int? target;
+  final double? weightKg;
   final DayNutrition nutrition;
   final double burned;
   final List<ActivityEntry> activities;
@@ -145,6 +148,9 @@ class _JournalBody extends ConsumerWidget {
     final today = DateTime.now();
     final budget = target != null ? target! + burned.round() : null;
     final remaining = budget != null ? budget - nutrition.kcal.round() : null;
+    final macros = (target != null && weightKg != null)
+        ? macroTargets(target!, weightKg!)
+        : null;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -194,7 +200,10 @@ class _JournalBody extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _MacroBar(nutrition: nutrition),
+        _MacroBar(nutrition: nutrition, targets: macros),
+        const SizedBox(height: 12),
+        _HydrationCard(
+            targetMl: weightKg != null ? hydrationTargetMl(weightKg!) : 2000),
         const SizedBox(height: 12),
 
         // Activité du jour
@@ -362,8 +371,9 @@ class _CalorieRing extends StatelessWidget {
 }
 
 class _MacroBar extends StatelessWidget {
-  const _MacroBar({required this.nutrition});
+  const _MacroBar({required this.nutrition, this.targets});
   final DayNutrition nutrition;
+  final MacroTargets? targets;
 
   @override
   Widget build(BuildContext context) {
@@ -371,21 +381,28 @@ class _MacroBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _macro('Protéines', nutrition.protein, Colors.redAccent,
-                Icons.egg_alt),
-            _macro('Glucides', nutrition.carbs, Colors.orangeAccent,
-                Icons.bakery_dining),
-            _macro('Lipides', nutrition.fat, Colors.blueAccent,
-                Icons.water_drop),
+            Expanded(
+              child: _macro(context, 'Protéines', nutrition.protein,
+                  targets?.protein, Colors.redAccent, Icons.egg_alt),
+            ),
+            Expanded(
+              child: _macro(context, 'Glucides', nutrition.carbs,
+                  targets?.carbs, Colors.orangeAccent, Icons.bakery_dining),
+            ),
+            Expanded(
+              child: _macro(context, 'Lipides', nutrition.fat, targets?.fat,
+                  Colors.blueAccent, Icons.opacity),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _macro(String label, double grams, Color color, IconData icon) {
+  Widget _macro(BuildContext context, String label, double grams,
+      double? target, Color color, IconData icon) {
     return Column(
       children: [
         Container(
@@ -397,10 +414,99 @@ class _MacroBar extends StatelessWidget {
           child: Icon(icon, color: color, size: 18),
         ),
         const SizedBox(height: 6),
-        Text('${grams.round()} g',
-            style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+        Text(
+          target != null
+              ? '${grams.round()} / ${target.round()} g'
+              : '${grams.round()} g',
+          style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13),
+        ),
         Text(label, style: const TextStyle(fontSize: 12)),
+        if (target != null && target > 0) ...[
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: (grams / target).clamp(0.0, 1.0),
+              minHeight: 5,
+              color: color,
+              backgroundColor: color.withValues(alpha: 0.15),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+}
+
+/// Carte d'hydratation : total du jour, cible, ajout par verre (250 ml).
+class _HydrationCard extends ConsumerWidget {
+  const _HydrationCard({required this.targetMl});
+  final int targetMl;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repo = ref.watch(dietRepositoryProvider);
+    return StreamBuilder<int>(
+      stream: repo.watchWaterForDay(DateTime.now()),
+      builder: (context, snap) {
+        final ml = snap.data ?? 0;
+        final glasses = (ml / 250).floor();
+        const blue = Color(0xFF2E9BD6);
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: blue.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.water_drop, color: blue, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Hydratation',
+                              style: Theme.of(context).textTheme.titleSmall),
+                          Text('$ml / $targetMl ml · $glasses verre(s)',
+                              style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline),
+                      tooltip: 'Annuler un verre',
+                      onPressed: ml > 0 ? () => repo.undoLastWater() : null,
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: () => repo.addWater(250),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Verre'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: (ml / targetMl).clamp(0.0, 1.0),
+                    minHeight: 8,
+                    color: blue,
+                    backgroundColor: blue.withValues(alpha: 0.15),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

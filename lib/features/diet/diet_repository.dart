@@ -142,6 +142,36 @@ class DietRepository {
   Future<void> deleteActivity(int id) =>
       (db.delete(db.activityEntries)..where((a) => a.id.equals(id))).go();
 
+  // ---------- Hydratation ----------
+
+  Stream<int> watchWaterForDay(DateTime day) {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    return (db.select(db.waterEntries)
+          ..where((w) => w.at.isBiggerOrEqualValue(start))
+          ..where((w) => w.at.isSmallerThanValue(end)))
+        .watch()
+        .map((rows) => rows.fold<int>(0, (s, w) => s + w.ml));
+  }
+
+  Future<void> addWater(int ml) => db.into(db.waterEntries).insert(
+        WaterEntriesCompanion.insert(at: DateTime.now(), ml: ml),
+      );
+
+  /// Annule la dernière prise d'eau du jour.
+  Future<void> undoLastWater() async {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final last = await (db.select(db.waterEntries)
+          ..where((w) => w.at.isBiggerOrEqualValue(start))
+          ..orderBy([(w) => OrderingTerm(expression: w.at, mode: OrderingMode.desc)])
+          ..limit(1))
+        .getSingleOrNull();
+    if (last != null) {
+      await (db.delete(db.waterEntries)..where((w) => w.id.equals(last.id))).go();
+    }
+  }
+
   // ---------- Requêtes par période (corrélations) ----------
 
   Future<List<MealEntry>> mealsBetween(DateTime start, DateTime end) {
@@ -206,4 +236,30 @@ class Calories {
     };
     return adjusted.round();
   }
+}
+
+/// Objectifs de macronutriments (grammes/jour).
+class MacroTargets {
+  MacroTargets({required this.protein, required this.carbs, required this.fat});
+  final double protein;
+  final double carbs;
+  final double fat;
+}
+
+/// Calcule les objectifs macros à partir du poids et de l'objectif calorique.
+/// Protéines 1,8 g/kg, lipides 0,9 g/kg, glucides = reste des calories.
+MacroTargets macroTargets(int kcalTarget, double weightKg) {
+  final protein = 1.8 * weightKg;
+  final fat = 0.9 * weightKg;
+  final carbsKcal = kcalTarget - protein * 4 - fat * 9;
+  final carbs = (carbsKcal > 0 ? carbsKcal : 0) / 4;
+  return MacroTargets(protein: protein, carbs: carbs, fat: fat);
+}
+
+/// Cible d'hydratation quotidienne (ml) ≈ 35 ml/kg, min 1500 ml,
+/// arrondie à la centaine.
+int hydrationTargetMl(double weightKg) {
+  final v = (weightKg * 35).round();
+  final clamped = v < 1500 ? 1500 : v;
+  return (clamped / 100).round() * 100;
 }

@@ -31,13 +31,14 @@ part 'database.g.dart';
     Profile,
     Accounts,
     NetWorthPoints,
+    WaterEntries,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -63,6 +64,9 @@ class AppDatabase extends _$AppDatabase {
             // Patrimoine net + multi-comptes.
             await m.createTable(accounts);
             await m.createTable(netWorthPoints);
+          }
+          if (from < 4) {
+            await m.createTable(waterEntries);
           }
         },
         beforeOpen: (details) async {

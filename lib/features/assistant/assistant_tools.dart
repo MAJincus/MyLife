@@ -119,6 +119,17 @@ const assistantTools = <LlmTool>[
       'required': ['intensity'],
     },
   ),
+  LlmTool(
+    name: 'log_water',
+    description: 'Enregistre une prise d\'eau (hydratation).',
+    parameters: {
+      'type': 'object',
+      'properties': {
+        'ml': {'type': 'integer', 'description': 'Quantité en ml (défaut 250).'},
+      },
+      'required': [],
+    },
+  ),
 ];
 
 /// Exécute un outil demandé par Claude et renvoie un message de résultat.
@@ -140,6 +151,8 @@ Future<String> executeTool(
         return _logSleep(container, input);
       case 'log_pain':
         return _logPain(container, input);
+      case 'log_water':
+        return _logWater(container, input);
       default:
         return 'Outil inconnu : $name';
     }
@@ -256,6 +269,13 @@ Future<String> _logSleep(
   );
   final mins = wake.difference(bed).inMinutes;
   return 'Nuit enregistrée : ${mins ~/ 60}h${(mins % 60).toString().padLeft(2, '0')}.';
+}
+
+Future<String> _logWater(
+    ProviderContainer container, Map<String, dynamic> input) async {
+  final ml = (input['ml'] as num?)?.toInt() ?? 250;
+  await container.read(dietRepositoryProvider).addWater(ml);
+  return '$ml ml d\'eau enregistrés.';
 }
 
 Future<String> _logPain(

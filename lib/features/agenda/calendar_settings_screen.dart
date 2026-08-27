@@ -36,12 +36,21 @@ class _CalendarSettingsScreenState
       return;
     }
     final cals = await svc.listCalendars();
-    final selected = await svc.selectedCalendarIds();
+    var selected = (await svc.selectedCalendarIds()).toSet();
     final writeId = await svc.writeCalendarId();
+
+    // Première connexion : on affiche tous les agendas par défaut
+    // (sinon rien ne s'affiche tant que rien n'est coché).
+    if (selected.isEmpty && cals.isNotEmpty) {
+      selected = cals.map((c) => c.id).toSet();
+      await svc.setSelectedCalendarIds(selected.toList());
+      ref.invalidate(externalEventsProvider);
+    }
+
     setState(() {
       _granted = true;
       _calendars = cals;
-      _selected = selected.toSet();
+      _selected = selected;
       _writeId = writeId;
       _loading = false;
     });

@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../data/database.dart';
 import 'finance_history.dart';
 import 'recurring.dart';
+import 'recurring_prefs.dart';
 import 'treasury.dart';
 
 final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
@@ -250,7 +251,10 @@ class FinanceRepository {
           label: t.note,
         ),
     ];
-    return RecurringSummary(detectRecurring(lite, minOccurrences: 2));
+    final detected = detectRecurring(lite, minOccurrences: 2);
+    final excluded = await RecurringPrefs.excludedLabels();
+    final kept = detected.where((r) => !excluded.contains(r.label)).toList();
+    return RecurringSummary(kept);
   }
 
   /// Prévision de trésorerie de fin de mois à partir d'un solde de départ.

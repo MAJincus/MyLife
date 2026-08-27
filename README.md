@@ -4,7 +4,7 @@ Application mobile Android (Flutter) de **suivi de vie au quotidien**, 100 % loc
 
 ## 📲 Télécharger
 
-👉 **[Dernière version (APK)](../../releases/latest)** — télécharge `app-release.apk`, puis autorise l'installation depuis des sources inconnues.
+👉 **[Dernière version (APK)](../../releases/latest)** — télécharge le fichier `MyLife-….apk`, puis autorise l'installation depuis des sources inconnues.
 
 ## ✨ Fonctionnalités
 

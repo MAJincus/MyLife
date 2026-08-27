@@ -188,6 +188,6 @@ final externalEventsProvider = FutureProvider<List<CalEvent>>((ref) async {
   final now = DateTime.now();
   final start = DateTime(now.year, now.month, now.day)
       .subtract(const Duration(days: 1));
-  final end = start.add(const Duration(days: 31));
+  final end = start.add(const Duration(days: 61));
   return svc.eventsBetween(ids, start, end);
 });

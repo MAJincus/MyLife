@@ -5,6 +5,7 @@ import '../../core/format.dart';
 import '../../core/widgets/section_header.dart';
 import 'finance_repository.dart';
 import 'recurring.dart';
+import 'recurring_prefs.dart';
 
 final recurringSummaryProvider = FutureProvider<RecurringSummary>((ref) {
   return ref.watch(financeRepositoryProvider).recurringSummary();
@@ -117,18 +118,29 @@ class RecurringScreen extends ConsumerWidget {
               ),
             );
           }
+          Future<void> exclude(String label) async {
+            await RecurringPrefs.exclude(label);
+            ref.invalidate(recurringSummaryProvider);
+          }
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               _SummaryCard(summary: summary),
-              const SizedBox(height: 16),
+              const SizedBox(height: 4),
+              Text('Glisse un élément vers la gauche pour le retirer des '
+                  'récurrents (ex. un achat ponctuel mal classé).',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline)),
+              const SizedBox(height: 12),
               if (summary.charges.isNotEmpty) ...[
                 SectionHeader(
                     icon: Icons.arrow_circle_down,
                     title: 'Charges fixes (${summary.charges.length})',
                     color: Theme.of(context).colorScheme.error),
                 const SizedBox(height: 4),
-                for (final r in summary.charges) _RecurringTile(r: r),
+                for (final r in summary.charges)
+                  _DismissibleRecurring(r: r, onExclude: () => exclude(r.label)),
                 const SizedBox(height: 16),
               ],
               if (summary.incomes.isNotEmpty) ...[
@@ -137,8 +149,16 @@ class RecurringScreen extends ConsumerWidget {
                     title: 'Revenus fixes (${summary.incomes.length})',
                     color: Colors.green.shade600),
                 const SizedBox(height: 4),
-                for (final r in summary.incomes) _RecurringTile(r: r),
+                for (final r in summary.incomes)
+                  _DismissibleRecurring(r: r, onExclude: () => exclude(r.label)),
               ],
+              const SizedBox(height: 12),
+              _ExcludedSection(
+                onRestore: (label) async {
+                  await RecurringPrefs.include(label);
+                  ref.invalidate(recurringSummaryProvider);
+                },
+              ),
               const SizedBox(height: 40),
             ],
           );
@@ -182,6 +202,74 @@ class _SummaryCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Récurrent avec glisser-pour-exclure.
+class _DismissibleRecurring extends StatelessWidget {
+  const _DismissibleRecurring({required this.r, required this.onExclude});
+  final Recurring r;
+  final Future<void> Function() onExclude;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: ValueKey('rec_${r.isIncome ? 'i' : 'c'}_${r.label}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [Icon(Icons.block), SizedBox(width: 6), Text('Retirer')],
+        ),
+      ),
+      onDismissed: (_) => onExclude(),
+      child: _RecurringTile(r: r),
+    );
+  }
+}
+
+/// Section repliable des récurrents exclus (avec restauration).
+class _ExcludedSection extends StatelessWidget {
+  const _ExcludedSection({required this.onRestore});
+  final Future<void> Function(String label) onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Set<String>>(
+      future: RecurringPrefs.excludedLabels(),
+      builder: (context, snap) {
+        final excluded = snap.data ?? const <String>{};
+        if (excluded.isEmpty) return const SizedBox.shrink();
+        return Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            leading: const Icon(Icons.block, size: 20),
+            title: Text('Exclus des récurrents (${excluded.length})',
+                style: Theme.of(context).textTheme.titleSmall),
+            children: [
+              for (final label in excluded)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(label),
+                  trailing: TextButton.icon(
+                    icon: const Icon(Icons.undo, size: 16),
+                    label: const Text('Réintégrer'),
+                    onPressed: () => onRestore(label),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

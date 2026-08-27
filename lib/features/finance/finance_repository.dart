@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../../data/database.dart';
+import 'finance_history.dart';
 import 'recurring.dart';
 import 'treasury.dart';
 
@@ -281,6 +282,18 @@ class FinanceRepository {
       avgDailyVariable: avgDaily,
       now: now,
     );
+  }
+
+  /// Statistiques mensuelles (revenus/dépenses/solde/taux d'épargne).
+  Future<List<MonthStat>> monthlyStats({int months = 6}) async {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month - months + 1, 1);
+    final rows = await (db.select(db.transactions)
+          ..where((t) => t.date.isBiggerOrEqualValue(start)))
+        .get();
+    final txs = rows.map<TxRow>(
+        (t) => (date: t.date, amount: t.amount, isIncome: t.kind == 'income'));
+    return monthlyStatsFrom(txs, now: now, months: months);
   }
 
   Future<double> _avgMonthlyExpense(int months) async {

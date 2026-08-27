@@ -24,9 +24,11 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
   static const _system =
       'Tu es un conseiller budgétaire pédagogue intégré à MyLife. À partir '
       'des données financières et du profil de foyer fournis, produis une '
-      'analyse en français, concrète et bienveillante, structurée en trois '
+      'analyse en français, concrète et bienveillante, structurée en '
       'sections avec des puces :\n'
-      '## Où tu dépenses trop\n## Comment mieux répartir\n## Pistes d\'optimisation\n'
+      '## Évolution (compare les mois : progrès ou dérive, tendance du taux '
+      'd\'épargne)\n## Où tu dépenses trop\n## Comment mieux répartir\n'
+      '## Pistes d\'optimisation\n'
       'Compare aux ordres de grandeur d\'un foyer similaire quand c\'est utile. '
       'Distingue les charges récurrentes (subies/fixes) des dépenses '
       'pilotables, et repère les abonnements optimisables. '
@@ -65,6 +67,7 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
     final capacity =
         profile.savingsCapacity ?? await repo.averageMonthlySavings();
     final recurring = await repo.recurringSummary();
+    final months = await repo.monthlyStats(months: 6);
 
     final b = StringBuffer();
     b.writeln('Analyse mes finances du mois (${Fmt.monthYear(now)}).');
@@ -96,6 +99,14 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
             '${budget != null ? ' (budget ${Fmt.euro(budget)})' : ''}');
       }
     }
+    b.writeln();
+    b.writeln('# Évolution (6 derniers mois)');
+    for (final m in months) {
+      b.writeln('- ${m.label} : revenus ${Fmt.euro(m.income)}, '
+          'dépenses ${Fmt.euro(m.expense)}, solde ${Fmt.euro(m.balance)}, '
+          'taux d\'épargne ${(m.savingsRate * 100).round()}%');
+    }
+
     if (recurring.items.isNotEmpty) {
       b.writeln();
       b.writeln('# Récurrences détectées (équivalent mensuel)');

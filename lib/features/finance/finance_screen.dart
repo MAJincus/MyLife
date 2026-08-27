@@ -11,6 +11,7 @@ import 'finance_repository.dart';
 import 'finance_dialogs.dart';
 import '../assistant/assistant_button.dart';
 import 'ai_analysis_screen.dart';
+import 'bilan_tab.dart';
 import 'import/import_screen.dart';
 import 'patrimoine_screen.dart';
 import 'pocket_icons.dart';
@@ -24,7 +25,7 @@ class FinanceScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: Text('Finances · ${Fmt.monthYear(DateTime.now())}'),
@@ -56,6 +57,7 @@ class FinanceScreen extends ConsumerWidget {
             tabs: [
               Tab(text: 'Dépenses'),
               Tab(text: 'Épargne'),
+              Tab(text: 'Bilan'),
             ],
           ),
         ),
@@ -63,6 +65,7 @@ class FinanceScreen extends ConsumerWidget {
           children: [
             _ExpensesTab(),
             _SavingsTab(),
+            BilanTab(),
           ],
         ),
       ),

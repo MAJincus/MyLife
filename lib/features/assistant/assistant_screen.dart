@@ -108,13 +108,23 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
 
       // Boucle d'agent : on rejoue tant que le modèle demande des outils.
       var guard = 0;
+      var executedTool = false;
       while (guard++ < 6) {
-        final res = await client.complete(
-          _history,
-          system: system,
-          tools: assistantTools,
-          maxTokens: 2048,
-        );
+        final LlmResult res;
+        try {
+          res = await client.complete(
+            _history,
+            system: system,
+            tools: assistantTools,
+            maxTokens: 2048,
+          );
+        } on LlmException {
+          // Certains fournisseurs (Gemini) refusent le tour de continuation
+          // après un appel d'outil (thought_signature manquant). Comme
+          // l'action a déjà réussi et est confirmée, on s'arrête sans erreur.
+          if (executedTool) break;
+          rethrow;
+        }
         _history.add(LlmMessage.assistant(res.text, res.toolCalls));
 
         if (res.text.isNotEmpty) {
@@ -129,6 +139,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           final result = await executeTool(container, tc.name, tc.args);
           setState(() => _messages.add(_ChatItem('tool', '✅ $result')));
           _history.add(LlmMessage.tool(tc.id, result));
+          executedTool = true;
         }
         _scrollToEnd();
       }

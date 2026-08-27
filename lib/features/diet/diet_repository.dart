@@ -246,11 +246,20 @@ class MacroTargets {
   final double fat;
 }
 
+/// Ratios macros par défaut (g/kg).
+const kDefaultProteinPerKg = 1.8;
+const kDefaultFatPerKg = 0.9;
+
 /// Calcule les objectifs macros à partir du poids et de l'objectif calorique.
-/// Protéines 1,8 g/kg, lipides 0,9 g/kg, glucides = reste des calories.
-MacroTargets macroTargets(int kcalTarget, double weightKg) {
-  final protein = 1.8 * weightKg;
-  final fat = 0.9 * weightKg;
+/// [proteinPerKg]/[fatPerKg] personnalisables ; glucides = reste des calories.
+MacroTargets macroTargets(
+  int kcalTarget,
+  double weightKg, {
+  double? proteinPerKg,
+  double? fatPerKg,
+}) {
+  final protein = (proteinPerKg ?? kDefaultProteinPerKg) * weightKg;
+  final fat = (fatPerKg ?? kDefaultFatPerKg) * weightKg;
   final carbsKcal = kcalTarget - protein * 4 - fat * 9;
   final carbs = (carbsKcal > 0 ? carbsKcal : 0) / 4;
   return MacroTargets(protein: protein, carbs: carbs, fat: fat);

@@ -247,6 +247,10 @@ class Profile extends Table {
   /// Notes libres sur la situation (chauffage, ville, animaux…).
   TextColumn get lifeContext => text().withDefault(const Constant(''))();
 
+  /// Objectifs macros personnalisés (g/kg). Null = valeurs par défaut.
+  RealColumn get proteinPerKg => real().nullable()();
+  RealColumn get fatPerKg => real().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

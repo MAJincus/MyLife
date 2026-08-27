@@ -117,7 +117,8 @@ Future<void> _dietSection(
       // Objectifs macros (selon poids + calories).
       final kcalT = profile.dailyKcalTarget;
       if (kcalT != null) {
-        final m = macroTargets(kcalT, latest);
+        final m = macroTargets(kcalT, latest,
+            proteinPerKg: profile.proteinPerKg, fatPerKg: profile.fatPerKg);
         buf.writeln('- Objectifs macros/j : P ${m.protein.round()}g, '
             'G ${m.carbs.round()}g, L ${m.fat.round()}g');
       }

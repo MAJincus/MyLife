@@ -97,6 +97,9 @@ dependencies:
   # Typographie moderne
   google_fonts: ^6.2.1
 
+  # Widget écran d'accueil Android
+  home_widget: ^0.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

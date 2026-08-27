@@ -89,6 +89,8 @@ class _JournalTab extends ConsumerWidget {
                       return _JournalBody(
                         target: target,
                         weightKg: latestWeight,
+                        proteinPerKg: profile?.proteinPerKg,
+                        fatPerKg: profile?.fatPerKg,
                         nutrition: nut,
                         burned: burned,
                         activities: activities,
@@ -130,6 +132,8 @@ class _JournalBody extends ConsumerWidget {
   const _JournalBody({
     required this.target,
     required this.weightKg,
+    required this.proteinPerKg,
+    required this.fatPerKg,
     required this.nutrition,
     required this.burned,
     required this.activities,
@@ -137,6 +141,8 @@ class _JournalBody extends ConsumerWidget {
   });
   final int? target;
   final double? weightKg;
+  final double? proteinPerKg;
+  final double? fatPerKg;
   final DayNutrition nutrition;
   final double burned;
   final List<ActivityEntry> activities;
@@ -149,7 +155,8 @@ class _JournalBody extends ConsumerWidget {
     final budget = target != null ? target! + burned.round() : null;
     final remaining = budget != null ? budget - nutrition.kcal.round() : null;
     final macros = (target != null && weightKg != null)
-        ? macroTargets(target!, weightKg!)
+        ? macroTargets(target!, weightKg!,
+            proteinPerKg: proteinPerKg, fatPerKg: fatPerKg)
         : null;
 
     return ListView(

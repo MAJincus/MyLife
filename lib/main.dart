@@ -8,6 +8,7 @@ import 'core/router.dart';
 import 'core/security/lock_gate.dart';
 import 'core/theme.dart';
 import 'data/database.dart';
+import 'features/widget/home_widget_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,12 +18,29 @@ Future<void> main() async {
   await db.warmup();
   await Notifications.init();
 
+  // Met à jour le widget d'accueil au démarrage et à chaque mise en arrière-plan.
+  await HomeWidgetService.update(db);
+  WidgetsBinding.instance.addObserver(_WidgetUpdater(db));
+
   runApp(
     ProviderScope(
       overrides: [databaseProvider.overrideWithValue(db)],
       child: const MyLifeApp(),
     ),
   );
+}
+
+class _WidgetUpdater extends WidgetsBindingObserver {
+  _WidgetUpdater(this.db);
+  final AppDatabase db;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      HomeWidgetService.update(db);
+    }
+  }
 }
 
 class MyLifeApp extends StatelessWidget {

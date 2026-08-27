@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import 'barcode_scan.dart';
 import 'diet_repository.dart';
+import 'hydration_reminders.dart';
 
 Future<void> _sheet(BuildContext context, Widget child) {
   return showModalBottomSheet(
@@ -449,6 +450,10 @@ class _ProfileFormState extends State<_ProfileForm> {
   final _targetWeight = TextEditingController();
   String _sex = 'other';
   String _goal = 'maintain';
+  double _proteinPerKg = kDefaultProteinPerKg;
+  double _fatPerKg = kDefaultFatPerKg;
+  bool _hydrationOn = false;
+  int _hydrationInterval = 2;
   bool _loaded = false;
 
   @override
@@ -460,9 +465,15 @@ class _ProfileFormState extends State<_ProfileForm> {
   Future<void> _load() async {
     final repo = widget.container.read(dietRepositoryProvider);
     final p = await repo.watchProfile().first;
+    final hyOn = await HydrationReminders.isEnabled();
+    final hyInt = await HydrationReminders.intervalHours();
     setState(() {
       _sex = p.sex;
       _goal = p.dietGoal;
+      _proteinPerKg = p.proteinPerKg ?? kDefaultProteinPerKg;
+      _fatPerKg = p.fatPerKg ?? kDefaultFatPerKg;
+      _hydrationOn = hyOn;
+      _hydrationInterval = hyInt;
       if (p.heightCm != null) _height.text = '${p.heightCm}';
       if (p.birthYear != null) _birthYear.text = '${p.birthYear}';
       if (p.dailyKcalTarget != null) _target.text = '${p.dailyKcalTarget}';
@@ -492,7 +503,11 @@ class _ProfileFormState extends State<_ProfileForm> {
       dailyKcalTarget: Value(int.tryParse(_target.text)),
       targetWeightKg:
           Value(double.tryParse(_targetWeight.text.replaceAll(',', '.'))),
+      proteinPerKg: Value(_proteinPerKg),
+      fatPerKg: Value(_fatPerKg),
     ));
+    await HydrationReminders.configure(
+        enabled: _hydrationOn, interval: _hydrationInterval);
     if (mounted) Navigator.pop(context);
   }
 
@@ -590,6 +605,82 @@ class _ProfileFormState extends State<_ProfileForm> {
                 ),
               ],
             ),
+            const SizedBox(height: 20),
+
+            // ---- Objectifs macros ----
+            Text('Objectifs macros',
+                style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              children: [
+                for (final p in const [
+                  ('Équilibré', 1.8, 0.9),
+                  ('Muscle', 2.2, 0.9),
+                  ('Sèche', 2.4, 0.8),
+                  ('Endurance', 1.6, 1.0),
+                ])
+                  ChoiceChip(
+                    label: Text(p.$1),
+                    selected: _proteinPerKg == p.$2 && _fatPerKg == p.$3,
+                    onSelected: (_) => setState(() {
+                      _proteinPerKg = p.$2;
+                      _fatPerKg = p.$3;
+                    }),
+                  ),
+              ],
+            ),
+            Text('Protéines : ${_proteinPerKg.toStringAsFixed(1)} g/kg'),
+            Slider(
+              value: _proteinPerKg,
+              min: 1.2,
+              max: 2.6,
+              divisions: 14,
+              label: _proteinPerKg.toStringAsFixed(1),
+              onChanged: (v) =>
+                  setState(() => _proteinPerKg = (v * 10).round() / 10),
+            ),
+            Text('Lipides : ${_fatPerKg.toStringAsFixed(1)} g/kg'),
+            Slider(
+              value: _fatPerKg,
+              min: 0.6,
+              max: 1.2,
+              divisions: 6,
+              label: _fatPerKg.toStringAsFixed(1),
+              onChanged: (v) =>
+                  setState(() => _fatPerKg = (v * 10).round() / 10),
+            ),
+            Text('Les glucides s\'ajustent automatiquement au reste.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.outline)),
+            const SizedBox(height: 16),
+
+            // ---- Rappels d'hydratation ----
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: const Icon(Icons.water_drop, color: Color(0xFF2E9BD6)),
+              title: const Text('Rappels d\'hydratation'),
+              subtitle: const Text('Notifications entre 8 h et 21 h'),
+              value: _hydrationOn,
+              onChanged: (v) => setState(() => _hydrationOn = v),
+            ),
+            if (_hydrationOn)
+              Row(
+                children: [
+                  const Text('Toutes les '),
+                  const SizedBox(width: 8),
+                  for (final h in const [1, 2, 3])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text('$h h'),
+                        selected: _hydrationInterval == h,
+                        onSelected: (_) =>
+                            setState(() => _hydrationInterval = h),
+                      ),
+                    ),
+                ],
+              ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,

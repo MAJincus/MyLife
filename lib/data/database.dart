@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -67,6 +67,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await m.createTable(waterEntries);
+          }
+          if (from < 5) {
+            await m.addColumn(profile, profile.proteinPerKg);
+            await m.addColumn(profile, profile.fatPerKg);
           }
         },
         beforeOpen: (details) async {

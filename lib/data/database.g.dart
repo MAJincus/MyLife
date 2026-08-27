@@ -5944,6 +5944,28 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileData> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _proteinPerKgMeta = const VerificationMeta(
+    'proteinPerKg',
+  );
+  @override
+  late final GeneratedColumn<double> proteinPerKg = GeneratedColumn<double>(
+    'protein_per_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fatPerKgMeta = const VerificationMeta(
+    'fatPerKg',
+  );
+  @override
+  late final GeneratedColumn<double> fatPerKg = GeneratedColumn<double>(
+    'fat_per_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5962,6 +5984,8 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileData> {
     housingSurfaceM2,
     vehiclesCount,
     lifeContext,
+    proteinPerKg,
+    fatPerKg,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6098,6 +6122,21 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileData> {
         ),
       );
     }
+    if (data.containsKey('protein_per_kg')) {
+      context.handle(
+        _proteinPerKgMeta,
+        proteinPerKg.isAcceptableOrUnknown(
+          data['protein_per_kg']!,
+          _proteinPerKgMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fat_per_kg')) {
+      context.handle(
+        _fatPerKgMeta,
+        fatPerKg.isAcceptableOrUnknown(data['fat_per_kg']!, _fatPerKgMeta),
+      );
+    }
     return context;
   }
 
@@ -6171,6 +6210,14 @@ class $ProfileTable extends Profile with TableInfo<$ProfileTable, ProfileData> {
         DriftSqlType.string,
         data['${effectivePrefix}life_context'],
       )!,
+      proteinPerKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}protein_per_kg'],
+      ),
+      fatPerKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}fat_per_kg'],
+      ),
     );
   }
 
@@ -6211,6 +6258,10 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
 
   /// Notes libres sur la situation (chauffage, ville, animaux…).
   final String lifeContext;
+
+  /// Objectifs macros personnalisés (g/kg). Null = valeurs par défaut.
+  final double? proteinPerKg;
+  final double? fatPerKg;
   const ProfileData({
     required this.id,
     required this.name,
@@ -6228,6 +6279,8 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
     this.housingSurfaceM2,
     this.vehiclesCount,
     required this.lifeContext,
+    this.proteinPerKg,
+    this.fatPerKg,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6266,6 +6319,12 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
       map['vehicles_count'] = Variable<int>(vehiclesCount);
     }
     map['life_context'] = Variable<String>(lifeContext);
+    if (!nullToAbsent || proteinPerKg != null) {
+      map['protein_per_kg'] = Variable<double>(proteinPerKg);
+    }
+    if (!nullToAbsent || fatPerKg != null) {
+      map['fat_per_kg'] = Variable<double>(fatPerKg);
+    }
     return map;
   }
 
@@ -6305,6 +6364,12 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
           ? const Value.absent()
           : Value(vehiclesCount),
       lifeContext: Value(lifeContext),
+      proteinPerKg: proteinPerKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(proteinPerKg),
+      fatPerKg: fatPerKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fatPerKg),
     );
   }
 
@@ -6330,6 +6395,8 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
       housingSurfaceM2: serializer.fromJson<int?>(json['housingSurfaceM2']),
       vehiclesCount: serializer.fromJson<int?>(json['vehiclesCount']),
       lifeContext: serializer.fromJson<String>(json['lifeContext']),
+      proteinPerKg: serializer.fromJson<double?>(json['proteinPerKg']),
+      fatPerKg: serializer.fromJson<double?>(json['fatPerKg']),
     );
   }
   @override
@@ -6352,6 +6419,8 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
       'housingSurfaceM2': serializer.toJson<int?>(housingSurfaceM2),
       'vehiclesCount': serializer.toJson<int?>(vehiclesCount),
       'lifeContext': serializer.toJson<String>(lifeContext),
+      'proteinPerKg': serializer.toJson<double?>(proteinPerKg),
+      'fatPerKg': serializer.toJson<double?>(fatPerKg),
     };
   }
 
@@ -6372,6 +6441,8 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
     Value<int?> housingSurfaceM2 = const Value.absent(),
     Value<int?> vehiclesCount = const Value.absent(),
     String? lifeContext,
+    Value<double?> proteinPerKg = const Value.absent(),
+    Value<double?> fatPerKg = const Value.absent(),
   }) => ProfileData(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -6401,6 +6472,8 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
         ? vehiclesCount.value
         : this.vehiclesCount,
     lifeContext: lifeContext ?? this.lifeContext,
+    proteinPerKg: proteinPerKg.present ? proteinPerKg.value : this.proteinPerKg,
+    fatPerKg: fatPerKg.present ? fatPerKg.value : this.fatPerKg,
   );
   ProfileData copyWithCompanion(ProfileCompanion data) {
     return ProfileData(
@@ -6440,6 +6513,10 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
       lifeContext: data.lifeContext.present
           ? data.lifeContext.value
           : this.lifeContext,
+      proteinPerKg: data.proteinPerKg.present
+          ? data.proteinPerKg.value
+          : this.proteinPerKg,
+      fatPerKg: data.fatPerKg.present ? data.fatPerKg.value : this.fatPerKg,
     );
   }
 
@@ -6461,7 +6538,9 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
           ..write('housingStatus: $housingStatus, ')
           ..write('housingSurfaceM2: $housingSurfaceM2, ')
           ..write('vehiclesCount: $vehiclesCount, ')
-          ..write('lifeContext: $lifeContext')
+          ..write('lifeContext: $lifeContext, ')
+          ..write('proteinPerKg: $proteinPerKg, ')
+          ..write('fatPerKg: $fatPerKg')
           ..write(')'))
         .toString();
   }
@@ -6484,6 +6563,8 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
     housingSurfaceM2,
     vehiclesCount,
     lifeContext,
+    proteinPerKg,
+    fatPerKg,
   );
   @override
   bool operator ==(Object other) =>
@@ -6504,7 +6585,9 @@ class ProfileData extends DataClass implements Insertable<ProfileData> {
           other.housingStatus == this.housingStatus &&
           other.housingSurfaceM2 == this.housingSurfaceM2 &&
           other.vehiclesCount == this.vehiclesCount &&
-          other.lifeContext == this.lifeContext);
+          other.lifeContext == this.lifeContext &&
+          other.proteinPerKg == this.proteinPerKg &&
+          other.fatPerKg == this.fatPerKg);
 }
 
 class ProfileCompanion extends UpdateCompanion<ProfileData> {
@@ -6524,6 +6607,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
   final Value<int?> housingSurfaceM2;
   final Value<int?> vehiclesCount;
   final Value<String> lifeContext;
+  final Value<double?> proteinPerKg;
+  final Value<double?> fatPerKg;
   const ProfileCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -6541,6 +6626,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     this.housingSurfaceM2 = const Value.absent(),
     this.vehiclesCount = const Value.absent(),
     this.lifeContext = const Value.absent(),
+    this.proteinPerKg = const Value.absent(),
+    this.fatPerKg = const Value.absent(),
   });
   ProfileCompanion.insert({
     this.id = const Value.absent(),
@@ -6559,6 +6646,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     this.housingSurfaceM2 = const Value.absent(),
     this.vehiclesCount = const Value.absent(),
     this.lifeContext = const Value.absent(),
+    this.proteinPerKg = const Value.absent(),
+    this.fatPerKg = const Value.absent(),
   });
   static Insertable<ProfileData> custom({
     Expression<int>? id,
@@ -6577,6 +6666,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     Expression<int>? housingSurfaceM2,
     Expression<int>? vehiclesCount,
     Expression<String>? lifeContext,
+    Expression<double>? proteinPerKg,
+    Expression<double>? fatPerKg,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -6595,6 +6686,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
       if (housingSurfaceM2 != null) 'housing_surface_m2': housingSurfaceM2,
       if (vehiclesCount != null) 'vehicles_count': vehiclesCount,
       if (lifeContext != null) 'life_context': lifeContext,
+      if (proteinPerKg != null) 'protein_per_kg': proteinPerKg,
+      if (fatPerKg != null) 'fat_per_kg': fatPerKg,
     });
   }
 
@@ -6615,6 +6708,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     Value<int?>? housingSurfaceM2,
     Value<int?>? vehiclesCount,
     Value<String>? lifeContext,
+    Value<double?>? proteinPerKg,
+    Value<double?>? fatPerKg,
   }) {
     return ProfileCompanion(
       id: id ?? this.id,
@@ -6633,6 +6728,8 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
       housingSurfaceM2: housingSurfaceM2 ?? this.housingSurfaceM2,
       vehiclesCount: vehiclesCount ?? this.vehiclesCount,
       lifeContext: lifeContext ?? this.lifeContext,
+      proteinPerKg: proteinPerKg ?? this.proteinPerKg,
+      fatPerKg: fatPerKg ?? this.fatPerKg,
     );
   }
 
@@ -6687,6 +6784,12 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
     if (lifeContext.present) {
       map['life_context'] = Variable<String>(lifeContext.value);
     }
+    if (proteinPerKg.present) {
+      map['protein_per_kg'] = Variable<double>(proteinPerKg.value);
+    }
+    if (fatPerKg.present) {
+      map['fat_per_kg'] = Variable<double>(fatPerKg.value);
+    }
     return map;
   }
 
@@ -6708,7 +6811,9 @@ class ProfileCompanion extends UpdateCompanion<ProfileData> {
           ..write('housingStatus: $housingStatus, ')
           ..write('housingSurfaceM2: $housingSurfaceM2, ')
           ..write('vehiclesCount: $vehiclesCount, ')
-          ..write('lifeContext: $lifeContext')
+          ..write('lifeContext: $lifeContext, ')
+          ..write('proteinPerKg: $proteinPerKg, ')
+          ..write('fatPerKg: $fatPerKg')
           ..write(')'))
         .toString();
   }
@@ -11809,6 +11914,8 @@ typedef $$ProfileTableCreateCompanionBuilder =
       Value<int?> housingSurfaceM2,
       Value<int?> vehiclesCount,
       Value<String> lifeContext,
+      Value<double?> proteinPerKg,
+      Value<double?> fatPerKg,
     });
 typedef $$ProfileTableUpdateCompanionBuilder =
     ProfileCompanion Function({
@@ -11828,6 +11935,8 @@ typedef $$ProfileTableUpdateCompanionBuilder =
       Value<int?> housingSurfaceM2,
       Value<int?> vehiclesCount,
       Value<String> lifeContext,
+      Value<double?> proteinPerKg,
+      Value<double?> fatPerKg,
     });
 
 class $$ProfileTableFilterComposer
@@ -11916,6 +12025,16 @@ class $$ProfileTableFilterComposer
 
   ColumnFilters<String> get lifeContext => $composableBuilder(
     column: $table.lifeContext,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get proteinPerKg => $composableBuilder(
+    column: $table.proteinPerKg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get fatPerKg => $composableBuilder(
+    column: $table.fatPerKg,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12008,6 +12127,16 @@ class $$ProfileTableOrderingComposer
     column: $table.lifeContext,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get proteinPerKg => $composableBuilder(
+    column: $table.proteinPerKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get fatPerKg => $composableBuilder(
+    column: $table.fatPerKg,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProfileTableAnnotationComposer
@@ -12086,6 +12215,14 @@ class $$ProfileTableAnnotationComposer
     column: $table.lifeContext,
     builder: (column) => column,
   );
+
+  GeneratedColumn<double> get proteinPerKg => $composableBuilder(
+    column: $table.proteinPerKg,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get fatPerKg =>
+      $composableBuilder(column: $table.fatPerKg, builder: (column) => column);
 }
 
 class $$ProfileTableTableManager
@@ -12135,6 +12272,8 @@ class $$ProfileTableTableManager
                 Value<int?> housingSurfaceM2 = const Value.absent(),
                 Value<int?> vehiclesCount = const Value.absent(),
                 Value<String> lifeContext = const Value.absent(),
+                Value<double?> proteinPerKg = const Value.absent(),
+                Value<double?> fatPerKg = const Value.absent(),
               }) => ProfileCompanion(
                 id: id,
                 name: name,
@@ -12152,6 +12291,8 @@ class $$ProfileTableTableManager
                 housingSurfaceM2: housingSurfaceM2,
                 vehiclesCount: vehiclesCount,
                 lifeContext: lifeContext,
+                proteinPerKg: proteinPerKg,
+                fatPerKg: fatPerKg,
               ),
           createCompanionCallback:
               ({
@@ -12171,6 +12312,8 @@ class $$ProfileTableTableManager
                 Value<int?> housingSurfaceM2 = const Value.absent(),
                 Value<int?> vehiclesCount = const Value.absent(),
                 Value<String> lifeContext = const Value.absent(),
+                Value<double?> proteinPerKg = const Value.absent(),
+                Value<double?> fatPerKg = const Value.absent(),
               }) => ProfileCompanion.insert(
                 id: id,
                 name: name,
@@ -12188,6 +12331,8 @@ class $$ProfileTableTableManager
                 housingSurfaceM2: housingSurfaceM2,
                 vehiclesCount: vehiclesCount,
                 lifeContext: lifeContext,
+                proteinPerKg: proteinPerKg,
+                fatPerKg: fatPerKg,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
